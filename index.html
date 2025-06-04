@@ -54,6 +54,7 @@
       border-radius: 8px;
       cursor: pointer;
       z-index: 2;
+      display: none;
     }
   </style>
 </head>
@@ -65,7 +66,7 @@
 
   <img id="image" src="huyuka1.jpg" alt="スポット画像" />
 
-  <button class="btn" onclick="playAudioAndShowImage()">音声案内を再生</button>
+  <button class="btn" id="playBtn" onclick="playAudioAndShowImage()">音声案内を再生</button>
 
   <audio id="audio" src="Cheery_Melodies.mp3"></audio>
 
@@ -79,27 +80,44 @@
         alert("カメラへのアクセスに失敗しました: " + err);
       });
 
-    // 📍 位置情報取得
-    const targetLat = 35.692431035492355; // 例: 東京駅の緯度
-    const targetLon = 140.05085017812303; // 例: 東京駅の経度
-    const threshold = 0.0001; // 約10mの範囲
+    // 📍 目的地の緯度経度（例: 東京駅）
+    const targetLat = 35.69237004070413;
+    const targetLon = 140.05083944928745;
 
-    function showPositionInfo(lat, lon) {
-      const distance = Math.sqrt((lat - targetLat)**2 + (lon - targetLon)**2);
+    // 📏 距離計算 (ハーサイン距離公式)
+    function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371000; // 地球の半径 (メートル)
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    function updatePosition(lat, lon) {
+      const distance = getDistanceFromLatLonInMeters(lat, lon, targetLat, targetLon);
       const info = document.getElementById("info");
-      info.innerText = `現在地: 緯度 ${lat.toFixed(5)}, 経度 ${lon.toFixed(5)}`;
+      const btn = document.getElementById("playBtn");
 
-      if (distance < threshold) {
-        info.innerText += "\n目的地に到達しました！";
+      info.innerText = `現在地: 緯度 ${lat.toFixed(6)}, 経度 ${lon.toFixed(6)}\n距離: 約${distance.toFixed(1)}m`;
+
+      if (distance <= 10) {
+        btn.style.display = "block";
+      } else {
+        btn.style.display = "none";
       }
     }
 
+    // 📡 位置情報取得
     if ("geolocation" in navigator) {
       navigator.geolocation.watchPosition(
         (position) => {
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;
-          showPositionInfo(lat, lon);
+          updatePosition(lat, lon);
         },
         (error) => {
           document.getElementById("info").innerText = "位置情報の取得に失敗しました";
@@ -110,7 +128,7 @@
       document.getElementById("info").innerText = "位置情報が利用できません";
     }
 
-    // 🔊 音声と画像を同時に表示
+    // 🔊 音声と画像表示
     function playAudioAndShowImage() {
       const audio = document.getElementById("audio");
       const image = document.getElementById("image");
