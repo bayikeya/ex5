@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>WebAR案内アプリ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #000;
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
+    }
+    #camera {
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: -1;
+    }
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      text-align: left;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 10px;
+      border-radius: 8px;
+      z-index: 1;
+    }
+    #image {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 80%;
+      display: none;
+      z-index: 1;
+    }
+    .btn {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      z-index: 2;
+    }
+  </style>
+</head>
+<body>
+
+  <video id="camera" autoplay playsinline muted></video>
+
+  <div id="info">位置情報取得中...</div>
+
+  <img id="image" src="huyuka1.jpg" alt="スポット画像" />
+
+  <button class="btn" onclick="playAudioAndShowImage()">音声案内を再生</button>
+
+  <audio id="audio" src="Cheery_Melodies.mp3"></audio>
+
+  <script>
+    // 🎥 カメラ起動
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
+      .then(function(stream) {
+        document.getElementById("camera").srcObject = stream;
+      })
+      .catch(function(err) {
+        alert("カメラへのアクセスに失敗しました: " + err);
+      });
+
+    // 📍 位置情報取得
+    const targetLat = 35.69282342434481; // 例: 東京駅の緯度
+    const targetLon = 140.05081264777886; // 例: 東京駅の経度
+    const threshold = 0.0001; // 約10mの範囲
+
+    function showPositionInfo(lat, lon) {
+      const distance = Math.sqrt((lat - targetLat)**2 + (lon - targetLon)**2);
+      const info = document.getElementById("info");
+      info.innerText = `現在地: 緯度 ${lat.toFixed(5)}, 経度 ${lon.toFixed(5)}`;
+
+      if (distance < threshold) {
+        info.innerText += "\n目的地に到達しました！";
+      }
+    }
+
+    if ("geolocation" in navigator) {
+      navigator.geolocation.watchPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          showPositionInfo(lat, lon);
+        },
+        (error) => {
+          document.getElementById("info").innerText = "位置情報の取得に失敗しました";
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+      );
+    } else {
+      document.getElementById("info").innerText = "位置情報が利用できません";
+    }
+
+    // 🔊 音声と画像を同時に表示
+    function playAudioAndShowImage() {
+      const audio = document.getElementById("audio");
+      const image = document.getElementById("image");
+
+      audio.play().catch((e) => {
+        alert("音声再生に失敗しました: " + e);
+      });
+
+      image.style.display = "block";
+    }
+  </script>
+</body>
+</html>
