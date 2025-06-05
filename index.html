@@ -34,7 +34,7 @@
     }
     #image {
       position: absolute;
-      bottom: 80px;
+      bottom: 120px;
       left: 50%;
       transform: translateX(-50%);
       max-width: 80%;
@@ -43,18 +43,23 @@
     }
     .btn {
       position: absolute;
-      bottom: 10px;
       left: 50%;
       transform: translateX(-50%);
       background-color: #007BFF;
       color: white;
       border: none;
-      padding: 15px 30px;
+      padding: 12px 24px;
       font-size: 16px;
       border-radius: 8px;
       cursor: pointer;
       z-index: 2;
       display: none;
+    }
+    #playBtn {
+      bottom: 60px;
+    }
+    #nextBtn {
+      bottom: 10px;
     }
   </style>
 </head>
@@ -64,6 +69,7 @@
   <div id="info">位置情報取得中...</div>
   <img id="image" src="" alt="スポット画像" />
   <button class="btn" id="playBtn" onclick="toggleAudio()">音声案内を再生</button>
+  <button class="btn" id="nextBtn" onclick="goToNextSpot()">このスポットは完了</button>
   <audio id="audio" src=""></audio>
 
   <script>
@@ -71,13 +77,10 @@
     const info = document.getElementById("info");
     const image = document.getElementById("image");
     const playBtn = document.getElementById("playBtn");
+    const nextBtn = document.getElementById("nextBtn");
     const audio = document.getElementById("audio");
 
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
-      .then(stream => camera.srcObject = stream)
-      .catch(err => alert("カメラへのアクセスに失敗しました: " + err));
-
-    const spots = [
+   const spots = [
       { name: "スポット1", lat: 35.69284976975826, lon: 140.05087273075657, image: "huyuka1.jpg", audio: "Cheery_Melodies.mp3" },
       { name: "スポット2", lat: 35.69338604056195, lon: 140.05110459825326, image: "huyuka2.jpg", audio: "Cheery_Melodies.mp3" },
       { name: "スポット3", lat: 35.69398726520782, lon: 140.0511797001022, image: "huyuka3.jpg", audio: "Cheery_Melodies.mp3" }
@@ -87,6 +90,11 @@
     let isInRange = false;
     let currentSpot = null;
     let isPlaying = false;
+
+    // カメラ起動
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
+      .then(stream => camera.srcObject = stream)
+      .catch(err => alert("カメラへのアクセスに失敗しました: " + err));
 
     function getDistance(lat1, lon1, lat2, lon2) {
       const R = 6371000;
@@ -100,8 +108,7 @@
     function checkProximity(lat, lon) {
       if (currentIndex >= spots.length) {
         info.innerText = "すべてのスポットを通過しました。";
-        playBtn.style.display = "none";
-        image.style.display = "none";
+        hideAllUI();
         return;
       }
 
@@ -113,16 +120,16 @@
         if (!isInRange) {
           currentSpot = spot;
           audio.src = spot.audio;
-          playBtn.style.display = "block";
-          playBtn.innerText = isPlaying ? "音声を停止" : "音声案内を再生";
           image.src = spot.image;
           image.style.display = "block";
+          playBtn.style.display = "block";
+          playBtn.innerText = isPlaying ? "音声を停止" : "音声案内を再生";
+          nextBtn.style.display = "block"; // ★ 常に表示
           isInRange = true;
         }
       } else {
         isInRange = false;
-        playBtn.style.display = "none";
-        image.style.display = "none";
+        hideAllUI();
         if (isPlaying) {
           audio.pause();
           isPlaying = false;
@@ -138,20 +145,33 @@
         isPlaying = true;
         playBtn.innerText = "音声を停止";
       } else {
-        audio.pause(); // 再開可能なように currentTime を保持
+        audio.pause();
         isPlaying = false;
         playBtn.innerText = "音声案内を再生";
       }
 
-      // 音声終了時に自動で次へ進む
       audio.onended = () => {
-        currentIndex++;
-        isInRange = false;
         isPlaying = false;
-        playBtn.style.display = "none";
-        image.style.display = "none";
-        currentSpot = null;
+        playBtn.innerText = "音声案内を再生";
+        // 完了ボタンはすでに表示されているため変更なし
       };
+    }
+
+    function goToNextSpot() {
+      if (isPlaying) {
+        audio.pause();
+        isPlaying = false;
+      }
+      currentIndex++;
+      isInRange = false;
+      currentSpot = null;
+      hideAllUI();
+    }
+
+    function hideAllUI() {
+      image.style.display = "none";
+      playBtn.style.display = "none";
+      nextBtn.style.display = "none";
     }
 
     if ("geolocation" in navigator) {
