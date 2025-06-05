@@ -73,7 +73,6 @@
     const playBtn = document.getElementById("playBtn");
     const audio = document.getElementById("audio");
 
-    // カメラ起動
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
       .then(stream => camera.srcObject = stream)
       .catch(err => alert("カメラへのアクセスに失敗しました: " + err));
@@ -85,7 +84,8 @@
     ];
 
     let currentIndex = 0;
-    let isDisplayed = false;
+    let isInRange = false;
+    let currentSpot = null;
     let isPlaying = false;
 
     function getDistance(lat1, lon1, lat2, lon2) {
@@ -101,6 +101,7 @@
       if (currentIndex >= spots.length) {
         info.innerText = "すべてのスポットを通過しました。";
         playBtn.style.display = "none";
+        image.style.display = "none";
         return;
       }
 
@@ -108,34 +109,49 @@
       const distance = getDistance(lat, lon, spot.lat, spot.lon);
       info.innerText = `現在地: 緯度 ${lat.toFixed(6)}, 経度 ${lon.toFixed(6)}\n次の目的地: ${spot.name}（残り${distance.toFixed(1)}m）`;
 
-      if (distance < 10 && !isDisplayed) {
-        audio.src = spot.audio;
-        image.src = spot.image;
-        image.style.display = "block";
-        playBtn.style.display = "block";
-        playBtn.innerText = "音声案内を再生";
-        isDisplayed = true;
+      if (distance < 10) {
+        if (!isInRange) {
+          currentSpot = spot;
+          audio.src = spot.audio;
+          playBtn.style.display = "block";
+          playBtn.innerText = isPlaying ? "音声を停止" : "音声案内を再生";
+          image.src = spot.image;
+          image.style.display = "block";
+          isInRange = true;
+        }
+      } else {
+        isInRange = false;
+        playBtn.style.display = "none";
+        image.style.display = "none";
+        if (isPlaying) {
+          audio.pause();
+          isPlaying = false;
+        }
       }
     }
 
     function toggleAudio() {
-      if (!audio.src) return;
+      if (!currentSpot) return;
 
       if (!isPlaying) {
         audio.play().catch(e => alert("音声再生に失敗しました: " + e));
         isPlaying = true;
         playBtn.innerText = "音声を停止";
       } else {
-        audio.pause();
-        audio.currentTime = 0;
+        audio.pause(); // 再開可能なように currentTime を保持
         isPlaying = false;
         playBtn.innerText = "音声案内を再生";
-
-        // 次のスポットへ
-        currentIndex++;
-        isDisplayed = false;
-        playBtn.style.display = "none";
       }
+
+      // 音声終了時に自動で次へ進む
+      audio.onended = () => {
+        currentIndex++;
+        isInRange = false;
+        isPlaying = false;
+        playBtn.style.display = "none";
+        image.style.display = "none";
+        currentSpot = null;
+      };
     }
 
     if ("geolocation" in navigator) {
