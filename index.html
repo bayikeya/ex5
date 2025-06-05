@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>WebAR案内アプリ</title>
+  <title>ルート案内WebAR</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
@@ -26,11 +26,11 @@
       position: absolute;
       top: 10px;
       left: 10px;
-      text-align: left;
       background: rgba(0, 0, 0, 0.6);
       padding: 10px;
       border-radius: 8px;
       z-index: 1;
+      white-space: pre-wrap;
     }
     #image {
       position: absolute;
@@ -61,83 +61,101 @@
 <body>
 
   <video id="camera" autoplay playsinline muted></video>
-
   <div id="info">位置情報取得中...</div>
-
-  <img id="image" src="huyuka1.jpg" alt="スポット画像" />
-
-  <button class="btn" id="playBtn" onclick="playAudioAndShowImage()">音声案内を再生</button>
-
-  <audio id="audio" src="Cheery_Melodies.mp3"></audio>
+  <img id="image" src="" alt="スポット画像" />
+  <button class="btn" id="playBtn" onclick="playAudio()">音声案内を再生</button>
+  <audio id="audio" src=""></audio>
 
   <script>
-    // 🎥 カメラ起動
+    // カメラ起動
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
-      .then(function(stream) {
-        document.getElementById("camera").srcObject = stream;
-      })
-      .catch(function(err) {
-        alert("カメラへのアクセスに失敗しました: " + err);
-      });
+      .then(stream => document.getElementById("camera").srcObject = stream)
+      .catch(err => alert("カメラへのアクセスに失敗しました: " + err));
 
-    // 📍 目的地の緯度経度（例: 東京駅）
-    const targetLat = 35.69237004070413;
-    const targetLon = 140.05083944928745;
+    // スポット順序付きリスト
+    const spots = [
+      {
+        name: "スポット1",
+        lat: 35.692838456988554,
+        lon: 140.05080772736093,
+        image: "huyuka1.jpg",
+        audio: "Cheery_Melodies.mp3"
+      },
+      {
+        name: "スポット2",
+        lat: 35.69298552286949,
+        lon: 140.05022733989998,
+        image: "huyuka2.jpg",
+        audio: "Each_Other&#039s_Relationship.mp3"
+      },
+      {
+        name: "スポット3",
+        lat: 35.69386791246026,
+        lon: 140.05038984838905,
+        image: "huyuka3.jpg",
+        audio: "Rings_in_Color.mp3"
+      }
+    ];
 
-    // 📏 距離計算 (ハーサイン距離公式)
-    function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
-      const R = 6371000; // 地球の半径 (メートル)
+    let currentIndex = 0;
+    let isDisplayed = false; // 現在のスポット画像・ボタン表示済みかどうか
+
+    function getDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
       const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.cos(lat1 * Math.PI / 180) *
+        Math.cos(lat2 * Math.PI / 180) *
         Math.sin(dLon / 2) * Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     }
 
-    function updatePosition(lat, lon) {
-      const distance = getDistanceFromLatLonInMeters(lat, lon, targetLat, targetLon);
+    function checkProximity(lat, lon) {
       const info = document.getElementById("info");
-      const btn = document.getElementById("playBtn");
+      const image = document.getElementById("image");
+      const playBtn = document.getElementById("playBtn");
 
-      info.innerText = `現在地: 緯度 ${lat.toFixed(6)}, 経度 ${lon.toFixed(6)}\n距離: 約${distance.toFixed(1)}m`;
+      if (currentIndex >= spots.length) {
+        info.innerText = "すべてのスポットを通過しました。";
+        playBtn.style.display = "none";
+        return;
+      }
 
-      if (distance <= 10) {
-        btn.style.display = "block";
-      } else {
-        btn.style.display = "none";
+      const spot = spots[currentIndex];
+      const distance = getDistance(lat, lon, spot.lat, spot.lon);
+
+      info.innerText = `現在地: 緯度 ${lat.toFixed(6)}, 経度 ${lon.toFixed(6)}\n次の目的地: ${spot.name}（残り${distance.toFixed(1)}m）`;
+
+      if (distance < 10 && !isDisplayed) {
+        document.getElementById("audio").src = spot.audio;
+        image.src = spot.image;
+        image.style.display = "block";
+        playBtn.style.display = "block";
+        isDisplayed = true;
       }
     }
 
-    // 📡 位置情報取得
+    function playAudio() {
+      const audio = document.getElementById("audio");
+      audio.play().catch(e => alert("音声再生に失敗しました: " + e));
+
+      // 次のスポットへ進む
+      currentIndex++;
+      isDisplayed = false; // 次のスポットで再表示可能に
+    }
+
+    // 現在地を監視
     if ("geolocation" in navigator) {
       navigator.geolocation.watchPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-          updatePosition(lat, lon);
-        },
-        (error) => {
-          document.getElementById("info").innerText = "位置情報の取得に失敗しました";
-        },
+        pos => checkProximity(pos.coords.latitude, pos.coords.longitude),
+        err => document.getElementById("info").innerText = "位置情報の取得に失敗しました",
         { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
       );
     } else {
       document.getElementById("info").innerText = "位置情報が利用できません";
-    }
-
-    // 🔊 音声と画像表示
-    function playAudioAndShowImage() {
-      const audio = document.getElementById("audio");
-      const image = document.getElementById("image");
-
-      audio.play().catch((e) => {
-        alert("音声再生に失敗しました: " + e);
-      });
-
-      image.style.display = "block";
     }
   </script>
 </body>
