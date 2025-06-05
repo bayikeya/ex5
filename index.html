@@ -63,61 +63,41 @@
   <video id="camera" autoplay playsinline muted></video>
   <div id="info">位置情報取得中...</div>
   <img id="image" src="" alt="スポット画像" />
-  <button class="btn" id="playBtn" onclick="playAudio()">音声案内を再生</button>
+  <button class="btn" id="playBtn" onclick="toggleAudio()">音声案内を再生</button>
   <audio id="audio" src=""></audio>
 
   <script>
+    const camera = document.getElementById("camera");
+    const info = document.getElementById("info");
+    const image = document.getElementById("image");
+    const playBtn = document.getElementById("playBtn");
+    const audio = document.getElementById("audio");
+
     // カメラ起動
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
-      .then(stream => document.getElementById("camera").srcObject = stream)
+      .then(stream => camera.srcObject = stream)
       .catch(err => alert("カメラへのアクセスに失敗しました: " + err));
 
-    // スポット順序付きリスト
     const spots = [
-      {
-        name: "スポット1",
-        lat: 35.692838456988554,
-        lon: 140.05080772736093,
-        image: "huyuka1.jpg",
-        audio: "Cheery_Melodies.mp3"
-      },
-      {
-        name: "スポット2",
-        lat: 35.69298552286949,
-        lon: 140.05022733989998,
-        image: "huyuka2.jpg",
-        audio: "Each_Other&#039s_Relationship.mp3"
-      },
-      {
-        name: "スポット3",
-        lat: 35.69386791246026,
-        lon: 140.05038984838905,
-        image: "huyuka3.jpg",
-        audio: "Rings_in_Color.mp3"
-      }
+      { name: "スポット1", lat: 35.69284976975826, lon: 140.05087273075657, image: "huyuka1.jpg", audio: "Cheery_Melodies.mp3" },
+      { name: "スポット2", lat: 35.69338604056195, lon: 140.05110459825326, image: "huyuka2.jpg", audio: "Cheery_Melodies.mp3" },
+      { name: "スポット3", lat: 35.69398726520782, lon: 140.0511797001022, image: "huyuka3.jpg", audio: "Cheery_Melodies.mp3" }
     ];
 
     let currentIndex = 0;
-    let isDisplayed = false; // 現在のスポット画像・ボタン表示済みかどうか
+    let isDisplayed = false;
+    let isPlaying = false;
 
     function getDistance(lat1, lon1, lat2, lon2) {
       const R = 6371000;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * Math.PI / 180) *
-        Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       return R * c;
     }
 
     function checkProximity(lat, lon) {
-      const info = document.getElementById("info");
-      const image = document.getElementById("image");
-      const playBtn = document.getElementById("playBtn");
-
       if (currentIndex >= spots.length) {
         info.innerText = "すべてのスポットを通過しました。";
         playBtn.style.display = "none";
@@ -126,36 +106,46 @@
 
       const spot = spots[currentIndex];
       const distance = getDistance(lat, lon, spot.lat, spot.lon);
-
       info.innerText = `現在地: 緯度 ${lat.toFixed(6)}, 経度 ${lon.toFixed(6)}\n次の目的地: ${spot.name}（残り${distance.toFixed(1)}m）`;
 
       if (distance < 10 && !isDisplayed) {
-        document.getElementById("audio").src = spot.audio;
+        audio.src = spot.audio;
         image.src = spot.image;
         image.style.display = "block";
         playBtn.style.display = "block";
+        playBtn.innerText = "音声案内を再生";
         isDisplayed = true;
       }
     }
 
-    function playAudio() {
-      const audio = document.getElementById("audio");
-      audio.play().catch(e => alert("音声再生に失敗しました: " + e));
+    function toggleAudio() {
+      if (!audio.src) return;
 
-      // 次のスポットへ進む
-      currentIndex++;
-      isDisplayed = false; // 次のスポットで再表示可能に
+      if (!isPlaying) {
+        audio.play().catch(e => alert("音声再生に失敗しました: " + e));
+        isPlaying = true;
+        playBtn.innerText = "音声を停止";
+      } else {
+        audio.pause();
+        audio.currentTime = 0;
+        isPlaying = false;
+        playBtn.innerText = "音声案内を再生";
+
+        // 次のスポットへ
+        currentIndex++;
+        isDisplayed = false;
+        playBtn.style.display = "none";
+      }
     }
 
-    // 現在地を監視
     if ("geolocation" in navigator) {
       navigator.geolocation.watchPosition(
         pos => checkProximity(pos.coords.latitude, pos.coords.longitude),
-        err => document.getElementById("info").innerText = "位置情報の取得に失敗しました",
+        err => info.innerText = "位置情報の取得に失敗しました",
         { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
       );
     } else {
-      document.getElementById("info").innerText = "位置情報が利用できません";
+      info.innerText = "位置情報が利用できません";
     }
   </script>
 </body>
