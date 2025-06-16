@@ -87,11 +87,10 @@
     ];
 
     let currentIndex = 0;
-    let isInRange = false;
+    let hasEnteredSpot = false;
     let currentSpot = null;
     let isPlaying = false;
 
-    // カメラ起動
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
       .then(stream => camera.srcObject = stream)
       .catch(err => alert("カメラへのアクセスに失敗しました: " + err));
@@ -116,18 +115,19 @@
       const distance = getDistance(lat, lon, spot.lat, spot.lon);
       info.innerText = `現在地: 緯度 ${lat.toFixed(6)}, 経度 ${lon.toFixed(6)}\n次の目的地: ${spot.name}（残り${distance.toFixed(1)}m）`;
 
-      if (distance < 10) {
-        if (!isInRange) {
-          currentSpot = spot;
-          audio.src = spot.audio;
-          image.src = spot.image;
-          image.style.display = "block";
-          playBtn.style.display = "block";
-          playBtn.innerText = isPlaying ? "音声を停止" : "音声案内を再生";
-          nextBtn.style.display = "block";
-          isInRange = true;
-        }
+      if (!hasEnteredSpot && distance < 10) {
+        // スポットに初めて入ったとき
+        currentSpot = spot;
+        hasEnteredSpot = true;
+
+        audio.src = spot.audio;
+        image.src = spot.image;
+        image.style.display = "block";
+        playBtn.style.display = "block";
+        playBtn.innerText = isPlaying ? "音声を停止" : "音声案内を再生";
+        nextBtn.style.display = "block";
       }
+      // スポット外に出ても表示は維持する
     }
 
     function toggleAudio() {
@@ -155,7 +155,7 @@
         isPlaying = false;
       }
       currentIndex++;
-      isInRange = false;
+      hasEnteredSpot = false;
       currentSpot = null;
       hideAllUI();
     }
