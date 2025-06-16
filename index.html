@@ -124,15 +124,8 @@
           image.style.display = "block";
           playBtn.style.display = "block";
           playBtn.innerText = isPlaying ? "音声を停止" : "音声案内を再生";
-          nextBtn.style.display = "block"; // ★ 常に表示
+          nextBtn.style.display = "block";
           isInRange = true;
-        }
-      } else {
-        isInRange = false;
-        hideAllUI();
-        if (isPlaying) {
-          audio.pause();
-          isPlaying = false;
         }
       }
     }
@@ -153,7 +146,6 @@
       audio.onended = () => {
         isPlaying = false;
         playBtn.innerText = "音声案内を再生";
-        // 完了ボタンはすでに表示されているため変更なし
       };
     }
 
