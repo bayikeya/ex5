@@ -34,7 +34,7 @@
     }
     #image {
       position: absolute;
-      bottom: 120px;
+      bottom: 180px;
       left: 50%;
       transform: translateX(-50%);
       max-width: 80%;
@@ -48,19 +48,16 @@
       background-color: #007BFF;
       color: white;
       border: none;
-      padding: 12px 24px;
-      font-size: 16px;
+      padding: 10px 20px;
+      font-size: 14px;
       border-radius: 8px;
       cursor: pointer;
       z-index: 2;
       display: none;
     }
-    #playBtn {
-      bottom: 60px;
-    }
-    #nextBtn {
-      bottom: 10px;
-    }
+    #playBtn { bottom: 120px; }
+    #patternBtn { bottom: 70px; }
+    #nextBtn { bottom: 20px; }
   </style>
 </head>
 <body>
@@ -69,6 +66,7 @@
   <div id="info">位置情報取得中...</div>
   <img id="image" src="" alt="スポット画像" />
   <button class="btn" id="playBtn" onclick="toggleAudio()">音声案内を再生</button>
+  <button class="btn" id="patternBtn" onclick="switchPattern()">パターン: A に切替</button>
   <button class="btn" id="nextBtn" onclick="goToNextSpot()">このスポットは完了</button>
   <audio id="audio" src=""></audio>
 
@@ -78,19 +76,32 @@
     const image = document.getElementById("image");
     const playBtn = document.getElementById("playBtn");
     const nextBtn = document.getElementById("nextBtn");
+    const patternBtn = document.getElementById("patternBtn");
     const audio = document.getElementById("audio");
 
+    // 音声パターン A/B それぞれのファイルを定義
     const spots = [
-      { name: "スポット1", lat: 35.69284976975826, lon: 140.05087273075657, image: "huyuka1.jpg", audio: "Cheery_Melodies.mp3" },
-      { name: "スポット2", lat: 35.69338604056195, lon: 140.05110459825326, image: "huyuka2.jpg", audio: "Cheery_Melodies.mp3" },
-      { name: "スポット3", lat: 35.69398726520782, lon: 140.0511797001022, image: "huyuka3.jpg", audio: "Cheery_Melodies.mp3" }
+      {
+        name: "スポット1", lat: 35.69284976975826, lon: 140.05087273075657, image: "huyuka1.jpg",
+        audio: { A: "Cheery_Melodies.mp3", B: "Morning.mp3" }
+      },
+      {
+        name: "スポット2", lat: 35.69338604056195, lon: 140.05110459825326, image: "huyuka2.jpg",
+        audio: { A: "Cheery_Melodies.mp3", B: "Morning.mp3" }
+      },
+      {
+        name: "スポット3", lat: 35.69398726520782, lon: 140.0511797001022, image: "huyuka3.jpg",
+        audio: { A: "Cheery_Melodies.mp3", B: "Morning.mp3" }
+      }
     ];
 
     let currentIndex = 0;
     let hasEnteredSpot = false;
     let currentSpot = null;
     let isPlaying = false;
+    let currentPattern = "A"; // 初期はAパターン
 
+    // カメラ起動
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
       .then(stream => camera.srcObject = stream)
       .catch(err => alert("カメラへのアクセスに失敗しました: " + err));
@@ -116,18 +127,18 @@
       info.innerText = `現在地: 緯度 ${lat.toFixed(6)}, 経度 ${lon.toFixed(6)}\n次の目的地: ${spot.name}（残り${distance.toFixed(1)}m）`;
 
       if (!hasEnteredSpot && distance < 10) {
-        // スポットに初めて入ったとき
         currentSpot = spot;
         hasEnteredSpot = true;
 
-        audio.src = spot.audio;
+        audio.src = spot.audio[currentPattern];
         image.src = spot.image;
         image.style.display = "block";
         playBtn.style.display = "block";
         playBtn.innerText = isPlaying ? "音声を停止" : "音声案内を再生";
         nextBtn.style.display = "block";
+        patternBtn.style.display = "block";
+        updatePatternButtonText();
       }
-      // スポット外に出ても表示は維持する
     }
 
     function toggleAudio() {
@@ -149,6 +160,30 @@
       };
     }
 
+    function switchPattern() {
+      // パターン切替
+      currentPattern = currentPattern === "A" ? "B" : "A";
+      updatePatternButtonText();
+
+      if (currentSpot) {
+        const newAudio = currentSpot.audio[currentPattern];
+        const wasPlaying = isPlaying;
+        audio.pause();
+        isPlaying = false;
+        audio.src = newAudio;
+        playBtn.innerText = "音声案内を再生";
+        if (wasPlaying) {
+          audio.play();
+          isPlaying = true;
+          playBtn.innerText = "音声を停止";
+        }
+      }
+    }
+
+    function updatePatternButtonText() {
+      patternBtn.innerText = `パターン: ${currentPattern} に切替`;
+    }
+
     function goToNextSpot() {
       if (isPlaying) {
         audio.pause();
@@ -164,6 +199,7 @@
       image.style.display = "none";
       playBtn.style.display = "none";
       nextBtn.style.display = "none";
+      patternBtn.style.display = "none";
     }
 
     if ("geolocation" in navigator) {
