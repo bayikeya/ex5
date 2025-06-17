@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>ルート案内WebAR</title>
+  <title>ルート案内WebAR（3パターン対応）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
@@ -79,19 +79,39 @@
     const patternBtn = document.getElementById("patternBtn");
     const audio = document.getElementById("audio");
 
-    // 音声パターン A/B それぞれのファイルを定義
     const spots = [
       {
-        name: "スポット1", lat: 35.69284976975826, lon: 140.05087273075657, image: "huyuka1.jpg",
-        audio: { A: "Cheery_Melodies.mp3", B: "Morning.mp3" }
+        name: "スポット1",
+        lat: 35.69284976975826,
+        lon: 140.05087273075657,
+        image: "huyuka1.jpg",
+        audio: {
+          A: "Cheery_Melodies.mp3",
+          B: "Morning.mp3",
+          C: "2_23_AM.mp3"
+        }
       },
       {
-        name: "スポット2", lat: 35.69338604056195, lon: 140.05110459825326, image: "huyuka2.jpg",
-        audio: { A: "Cheery_Melodies.mp3", B: "Morning.mp3" }
+        name: "スポット2",
+        lat: 35.69338604056195,
+        lon: 140.05110459825326,
+        image: "huyuka2.jpg",
+        audio: {
+          A: "Cheery_Melodies.mp3",
+          B: "Morning.mp3",
+          C: "2_23_AM.mp3"
+        }
       },
       {
-        name: "スポット3", lat: 35.69398726520782, lon: 140.0511797001022, image: "huyuka3.jpg",
-        audio: { A: "Cheery_Melodies.mp3", B: "Morning.mp3" }
+        name: "スポット3",
+        lat: 35.69398726520782,
+        lon: 140.0511797001022,
+        image: "huyuka3.jpg",
+        audio: {
+          A: "Cheery_Melodies.mp3",
+          B: "Morning.mp3",
+          C: "2_23_AM.mp3"
+        }
       }
     ];
 
@@ -99,9 +119,8 @@
     let hasEnteredSpot = false;
     let currentSpot = null;
     let isPlaying = false;
-    let currentPattern = "A"; // 初期はAパターン
+    let currentPattern = "A";
 
-    // カメラ起動
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
       .then(stream => camera.srcObject = stream)
       .catch(err => alert("カメラへのアクセスに失敗しました: " + err));
@@ -161,8 +180,9 @@
     }
 
     function switchPattern() {
-      // パターン切替
-      currentPattern = currentPattern === "A" ? "B" : "A";
+      const patterns = ["A", "B", "C"];
+      const index = patterns.indexOf(currentPattern);
+      currentPattern = patterns[(index + 1) % patterns.length];
       updatePatternButtonText();
 
       if (currentSpot) {
